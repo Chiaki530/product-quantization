@@ -71,10 +71,10 @@ def loader(data_set='audio', top_k=20, ground_metric='euclid', folder='../data/'
     train_file = folder_path + '/%s_learn.%s' % (data_set, data_type)
     query_file = folder_path + '/%s_query.%s' % (data_set, data_type)
     ground_truth = folder_path + '/%s_%s_%s_groundtruth.ivecs' % \
-                   (top_k, data_set, ground_metric)
+        (top_k, data_set, ground_metric)
 
     print("# load the base data {}, \n# load the queries {}, \n# load the ground truth {}".format(base_file, query_file,
-                                                                                            ground_truth))
+                                                                                                  ground_truth))
     if data_type == 'fvecs':
         X = fvecs_read(base_file)
         Q = fvecs_read(query_file)
@@ -95,5 +95,5 @@ def loader(data_set='audio', top_k=20, ground_metric='euclid', folder='../data/'
         G = ivecs_read(ground_truth)
     except FileNotFoundError:
         G = None
+    Q = Q[0:100, :]
     return X, T, Q, G
-
