@@ -5,8 +5,9 @@ import math
 import tqdm
 from scipy.spatial.distance import hamming
 
+
 @nb.jit
-def arg_sort(distances): # Return indices of top-k neighbors
+def arg_sort(distances):  # Return indices of top-k neighbors
     top_k = min(131072, len(distances)-1)
     # Return Top-K indices
     indices = np.argpartition(distances, top_k)[:top_k]
@@ -17,6 +18,7 @@ def arg_sort(distances): # Return indices of top-k neighbors
 def product_arg_sort(q, compressed):
     distances = np.dot(compressed, -q)
     return arg_sort(distances)
+
 
 @nb.jit
 def angular_arg_sort(q, compressed, norms_sqr):
@@ -58,15 +60,18 @@ def euclidean_norm_arg_sort(q, compressed, norms_sqr):
 #         distances[i] = 0 if (int(hamming(q_encoded, vecs_encoded[i])) == 0) else 1
 #     return arg_sort(distances)
 
+
 @nb.jit
 def multiple_table_sort(q_encoded, vecs_encoded):
     distances = np.zeros(vecs_encoded.shape[1], dtype=np.int32)
-    mid = np.product(q_encoded != np.transpose(vecs_encoded, (1,0,2)), axis=2)
-        # for i in nb.prange(vecs_encoded.shape[1]):
-        #     distances[h, i] = 0 if np.array_equal(q_encoded[h, :], vecs_encoded[h, i, :]) else 1
+    # AND
+    mid = np.product(q_encoded != np.transpose(
+        vecs_encoded, (1, 0, 2)), axis=2)
+    # for i in nb.prange(vecs_encoded.shape[1]):
+    #     distances[h, i] = 0 if np.array_equal(q_encoded[h, :], vecs_encoded[h, i, :]) else 1
     distances = np.sum(mid, axis=1) / len(q_encoded)
     return arg_sort(distances)
-    
+
 
 @nb.jit
 def parallel_sort(metric, compressed, Q, X, norms_sqr=None):
@@ -80,9 +85,11 @@ def parallel_sort(metric, compressed, Q, X, norms_sqr=None):
     """
     rank = None
     if(metric == 'multitable'):
-        rank = np.empty((Q.shape[0], min(131072, compressed.shape[1]-1)), dtype=np.int32)
+        rank = np.empty(
+            (Q.shape[0], min(131072, compressed.shape[1]-1)), dtype=np.int32)
     else:
-        rank = np.empty((Q.shape[0], min(131072, compressed.shape[0]-1)), dtype=np.int32)
+        rank = np.empty(
+            (Q.shape[0], min(131072, compressed.shape[0]-1)), dtype=np.int32)
 
     p_range = nb.prange(Q.shape[0])
 
@@ -106,7 +113,7 @@ def parallel_sort(metric, compressed, Q, X, norms_sqr=None):
         for i in p_range:
             rank[i, :] = euclidean_arg_sort(Q[i], compressed)
 
-    return rank # rank: sizeof(Q) \times top-k matrix
+    return rank  # rank: sizeof(Q) \times top-k matrix
 
 
 @nb.jit
@@ -122,7 +129,8 @@ class Sorter(object):
         self.Q = Q
         self.X = X
         print()
-        self.topK = parallel_sort(metric, compressed, Q, X, norms_sqr=norms_sqr)
+        self.topK = parallel_sort(
+            metric, compressed, Q, X, norms_sqr=norms_sqr)
 
     def recall(self, G, T):
         t = min(T, len(self.topK[0]))
@@ -131,7 +139,8 @@ class Sorter(object):
 
     def sum_recall(self, G, T):
         assert len(self.Q) == len(self.topK), "number of query not equals"
-        assert len(self.topK) <= len(G), "number of queries should not exceed the number of queries in ground truth"
+        assert len(self.topK) <= len(
+            G), "number of queries should not exceed the number of queries in ground truth"
         # Compute #TP for each q \in Q
         # G: the KNN computed by PQ algorithm
         true_positive = true_positives(self.topK, self.Q, G, T)
@@ -151,8 +160,10 @@ class BatchSorter(object):
                 q = Q[i * batch_size: (i + 1) * batch_size, :]
             g = G[i * batch_size: (i + 1) * batch_size, :]
             # compressed: compressed database; q: part of query; X: original database
-            sorter = Sorter(compressed, q, X, metric=metric, norms_sqr=norms_sqr)
-            self.recalls[:] = self.recalls[:] + [sorter.sum_recall(g, t) for t in Ts]
+            sorter = Sorter(compressed, q, X, metric=metric,
+                            norms_sqr=norms_sqr)
+            self.recalls[:] = self.recalls[:] + \
+                [sorter.sum_recall(g, t) for t in Ts]
         self.recalls = self.recalls / len(self.Q)
 
     def recall(self):
